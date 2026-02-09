@@ -27,16 +27,16 @@ input{padding:8px;margin:5px;width:100%}
 <body>
 
 <header>
-<h1 id="schoolHeader">UNEB AUTOMATIC SUBJECT SUMMARY</h1>
+  <h1 id="schoolHeader">UNEB AUTOMATIC SUBJECT SUMMARY</h1>
 </header>
 
 <!-- LOGIN -->
 <div id="loginBox" style="max-width:400px;margin:60px auto;background:#fff;padding:20px;border-radius:10px">
-<h2 style="text-align:center">School Login (Demo)</h2>
-<input id="username" placeholder="Username">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-<p id="loginError" style="color:red;text-align:center"></p>
+  <h2 style="text-align:center">School Login (Demo)</h2>
+  <input id="username" placeholder="Username">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p id="loginError" style="color:red;text-align:center"></p>
 </div>
 
 <!-- APP -->
@@ -59,86 +59,132 @@ input{padding:8px;margin:5px;width:100%}
 </div>
 
 <script>
+/* ---------- LOGIN ---------- */
 function login(){
- if(username.value==="admin" && password.value==="1234"){
-  loginBox.style.display="none";
-  app.style.display="block";
- }else loginError.innerText="Use admin / 1234";
+  if(username.value==="admin" && password.value==="1234"){
+    loginBox.style.display="none";
+    app.style.display="block";
+  }else{
+    loginError.innerText="Use admin / 1234";
+  }
 }
 
-let subjects={}, gender={};
+/* ---------- DATA STORES ---------- */
+let subjectTotals = {};
+let genderTotals = {};
 
+/* ---------- GENERATE REPORT ---------- */
 function generateReport(){
- const file=document.getElementById("file").files[0];
- if(!file){alert("Upload Excel");return}
+  const file = document.getElementById("file").files[0];
+  if(!file){ alert("Upload Excel file"); return; }
 
- const reader=new FileReader();
- reader.onload=e=>{
-  const wb=XLSX.read(e.target.result,{type:"binary"});
-  const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result,{type:"binary"});
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-  subjects={}; gender={};
+    subjectTotals = {};
+    genderTotals = {};
 
-  data.forEach(r=>{
-   const s=r.SUBJECT, g=r.GRADE, sex=r.SEX;
-   if(!subjects[s]) subjects[s]={A:0,B:0,C:0,D:0,E:0,X:0};
-   if(g) subjects[s][g]++;
+    rows.forEach(row=>{
+      const sex = (row.SEX || "").toUpperCase();
+      const subjectsCell = row.SUBJECTS || "";
 
-   if(!gender[s]) gender[s]={MA:0,MB:0,MC:0,MD:0,ME:0,FA:0,FB:0,FC:0,FD:0,FE:0};
-   if(sex==="M" && g) gender[s]["M"+g]++;
-   if(sex==="F" && g) gender[s]["F"+g]++;
+      const items = subjectsCell.split(" ");
+
+      items.forEach(it=>{
+        if(!it.includes("-")) return;
+
+        let [sub, grade] = it.split("-");
+        sub = sub.trim().toUpperCase();
+        grade = grade.trim().toUpperCase();
+
+        if(!["A","B","C","D","E","X"].includes(grade)) grade = "X";
+
+        if(!subjectTotals[sub]){
+          subjectTotals[sub] = {A:0,B:0,C:0,D:0,E:0,X:0};
+        }
+        subjectTotals[sub][grade]++;
+
+        if(!genderTotals[sub]){
+          genderTotals[sub] = {
+            MA:0,MB:0,MC:0,MD:0,ME:0,
+            FA:0,FB:0,FC:0,FD:0,FE:0
+          };
+        }
+
+        if(sex==="M" && grade!=="X") genderTotals[sub]["M"+grade]++;
+        if(sex==="F" && grade!=="X") genderTotals[sub]["F"+grade]++;
+      });
+    });
+
+    schoolHeader.innerText =
+      (schoolName.value || "SCHOOL") + " – UNEB REPORT " + (year.value || "");
+
+    renderSubjectTable();
+    renderGenderTable();
+  };
+
+  reader.readAsBinaryString(file);
+}
+
+/* ---------- SUBJECT TABLE ---------- */
+function renderSubjectTable(){
+  let html="<h2>Subject Summary</h2><table><tr><th>Subject</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>X</th></tr>";
+
+  Object.keys(subjectTotals).sort((a,b)=>{
+    if(a==="PROJECT") return 1;
+    if(b==="PROJECT") return -1;
+    return a.localeCompare(b);
+  }).forEach(sub=>{
+    const s = subjectTotals[sub];
+    html+=`<tr>
+      <td>${sub}</td>
+      <td>${s.A}</td>
+      <td>${s.B}</td>
+      <td>${s.C}</td>
+      <td>${s.D}</td>
+      <td>${s.E}</td>
+      <td>${s.X}</td>
+    </tr>`;
   });
 
-  schoolHeader.innerText =
-   (schoolName.value||"SCHOOL")+" – UNEB REPORT "+(year.value||"");
-
-  renderSubject();
-  renderGender();
- };
- reader.readAsBinaryString(file);
+  html+="</table>";
+  subjectSummary.innerHTML=html;
 }
 
-function renderSubject(){
- let html="<h2>Subject Summary</h2><table><tr><th>Subject</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>X</th></tr>";
- Object.keys(subjects).sort((a,b)=>{
-  if(a==="PROJECT")return 1;
-  if(b==="PROJECT")return -1;
-  return a.localeCompare(b);
- }).forEach(s=>{
-  let x=subjects[s];
-  html+=`<tr><td>${s}</td><td>${x.A}</td><td>${x.B}</td><td>${x.C}</td><td>${x.D}</td><td>${x.E}</td><td>${x.X}</td></tr>`;
- });
- html+="</table>";
- subjectSummary.innerHTML=html;
+/* ---------- GENDER TABLE ---------- */
+function renderGenderTable(){
+  let html="<h2>Gender Summary</h2><table><tr><th>Subject</th><th>MA</th><th>MB</th><th>MC</th><th>MD</th><th>ME</th><th>FA</th><th>FB</th><th>FC</th><th>FD</th><th>FE</th></tr>";
+
+  Object.keys(genderTotals).forEach(sub=>{
+    const g = genderTotals[sub];
+    html+=`<tr>
+      <td>${sub}</td>
+      <td>${g.MA}</td><td>${g.MB}</td><td>${g.MC}</td><td>${g.MD}</td><td>${g.ME}</td>
+      <td>${g.FA}</td><td>${g.FB}</td><td>${g.FC}</td><td>${g.FD}</td><td>${g.FE}</td>
+    </tr>`;
+  });
+
+  html+="</table>";
+  genderSummary.innerHTML=html;
 }
 
-function renderGender(){
- let html="<h2>Gender Summary</h2><table><tr><th>Subject</th><th>MA</th><th>MB</th><th>MC</th><th>MD</th><th>ME</th><th>FA</th><th>FB</th><th>FC</th><th>FD</th><th>FE</th></tr>";
- Object.keys(gender).forEach(s=>{
-  let g=gender[s];
-  html+=`<tr><td>${s}</td><td>${g.MA}</td><td>${g.MB}</td><td>${g.MC}</td><td>${g.MD}</td><td>${g.ME}</td>
-  <td>${g.FA}</td><td>${g.FB}</td><td>${g.FC}</td><td>${g.FD}</td><td>${g.FE}</td></tr>`;
- });
- html+="</table>";
- genderSummary.innerHTML=html;
-}
-
+/* ---------- EXPORTS ---------- */
 function exportSubject(){
- let ws=XLSX.utils.json_to_sheet(
- Object.keys(subjects).map(s=>({Subject:s,...subjects[s]}))
- );
- let wb=XLSX.utils.book_new();
- XLSX.utils.book_append_sheet(wb,ws,"Subject Summary");
- XLSX.writeFile(wb,"subject_summary.xlsx");
+  const data = Object.keys(subjectTotals).map(s=>({Subject:s,...subjectTotals[s]}));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Subject Summary");
+  XLSX.writeFile(wb,"subject_summary.xlsx");
 }
 
 function exportGender(){
- let ws=XLSX.utils.json_to_sheet(
- Object.keys(gender).map(s=>({Subject:s,...gender[s]}))
- );
- let wb=XLSX.utils.book_new();
- XLSX.utils.book_append_sheet(wb,ws,"Gender Summary");
- XLSX.writeFile(wb,"gender_summary.xlsx");
+  const data = Object.keys(genderTotals).map(s=>({Subject:s,...genderTotals[s]}));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Gender Summary");
+  XLSX.writeFile(wb,"gender_summary.xlsx");
 }
 </script>
 
