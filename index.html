@@ -5,6 +5,7 @@
   <title>UNEB Automatic Subject Summary System</title>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     :root {
@@ -15,92 +16,51 @@
       --text:#0f172a;
     }
 
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-    }
+    body { margin:0; font-family:Segoe UI, Arial; background:var(--bg); color:var(--text); }
 
-    header {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: #fff;
-      padding: 20px;
-      text-align: center;
-    }
+    header { background:linear-gradient(135deg,var(--primary),var(--secondary)); color:#fff; padding:20px; text-align:center; }
 
-    main {
-      max-width: 1200px;
-      margin: auto;
-      padding: 20px;
-    }
+    main { max-width:1200px; margin:auto; padding:20px; }
 
-    h1,h2,h3,h4 { margin-top: 0; }
+    .card { background:var(--card); padding:20px; border-radius:10px; margin-bottom:20px; box-shadow:0 6px 15px rgba(0,0,0,.08); }
 
-    .card {
-      background: var(--card);
-      padding: 20px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      box-shadow: 0 6px 15px rgba(0,0,0,.08);
-    }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:15px; }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
-      gap: 15px;
-    }
+    input, button { padding:10px; width:100%; border-radius:6px; border:1px solid #cbd5f5; }
 
-    input, button {
-      padding: 10px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: 1px solid #cbd5f5;
-      width: 100%;
-    }
-
-    button {
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background .3s;
-    }
-
+    button { background:var(--primary); color:#fff; font-weight:bold; cursor:pointer; border:none; }
     button:hover { background:#1e3a8a; }
 
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-top: 15px;
-      font-size: 13px;
-    }
+    table { width:100%; border-collapse:collapse; margin-top:10px; font-size:13px; }
+    th,td { border:1px solid #e2e8f0; padding:8px; text-align:center; }
+    th { background:#e0e7ff; }
 
-    th, td {
-      border: 1px solid #e2e8f0;
-      padding: 8px;
-      text-align: center;
-    }
+    footer { text-align:center; padding:15px; color:#64748b; font-size:13px; }
 
-    th {
-      background: #e0e7ff;
-      font-weight: bold;
-    }
-
-    footer {
-      text-align: center;
-      padding: 15px;
-      color: #64748b;
-      font-size: 13px;
+    @media print {
+      button,input { display:none; }
+      body { background:#fff; }
+      .card { box-shadow:none; }
     }
   </style>
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="card" style="max-width:400px;margin:40px auto;">
+  <h2>School Login (Demo)</h2>
+  <input id="loginSchool" placeholder="School Code" />
+  <input id="loginPass" type="password" placeholder="Password" />
+  <br><br>
+  <button onclick="login()">Login</button>
+  <p id="loginMsg" style="color:red"></p>
+</div>
+
+<div id="app" style="display:none;">
+
 <header>
   <h1>UNEB Automatic Subject Summary</h1>
-  <p>Smart grading & performance analysis</p>
+  <p>Grading • Charts • Reports</p>
 </header>
 
 <main>
@@ -109,12 +69,12 @@
     <h2>School Information</h2>
     <div class="grid">
       <input id="school" placeholder="School Name" />
-      <input id="year" placeholder="Year (e.g. 2025)" />
+      <input id="year" placeholder="Year" />
     </div>
   </div>
 
   <div class="card">
-    <h2>Upload Results (Sheet1)</h2>
+    <h2>Upload Sheet1 Results</h2>
     <input type="file" id="file" accept=".xlsx" />
     <br><br>
     <button onclick="generateReport()">Generate UNEB Report</button>
@@ -123,105 +83,120 @@
   <div class="card" id="summary"></div>
   <div class="card" id="genderSummary"></div>
 
+  <div class="card">
+    <h2>Performance Charts</h2>
+    <select id="subjectSelect" onchange="chart()"></select><br><br><canvas id="chart"></canvas>
+  </div>
+
+  <div class="card">
+    <button onclick="exportExcel()">Export Summary to Excel</button>
+    <button onclick="window.print()">Print UNEB Report</button>
+  </div>
+
 </main>
 
-<footer>
-  © UNEB Results Automation System
-</footer>
+<footer>© UNEB Results Automation System</footer>
+
+</div>
 
 <script>
-let summaryData = {};
-let genderData = {};
-
-const GRADES = ['A','B','C','D','E','X'];
-
-function generateReport() {
-  const fileInput = document.getElementById('file');
-  if (!fileInput.files.length) return alert('Upload Excel file first');
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    const wb = XLSX.read(e.target.result, { type: 'binary' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-    processRows(rows);
-  };
-  reader.readAsBinaryString(fileInput.files[0]);
+// DEMO LOGIN
+const USERS = { NLSC:'2025', RUBONGI:'1234' };
+function login(){
+  const s=document.getElementById('loginSchool').value.toUpperCase();
+  const p=document.getElementById('loginPass').value;
+  if(USERS[s] && USERS[s]===p){
+    loginScreen.style.display='none';
+    app.style.display='block';
+    school.value=s+' SECONDARY SCHOOL';
+  } else loginMsg.innerText='Invalid login';
 }
 
-function processRows(rows) {
-  const headers = rows[0].map(h => h.toString().toUpperCase());
-  const subjIdx = headers.findIndex(h => h.includes('SUBJECT'));
-  const sexIdx  = headers.findIndex(h => h === 'SEX');
+let summaryData={}, genderData={};
+const GRADES=['A','B','C','D','E','X'];
 
-  summaryData = {};
-  genderData = {};
+function generateReport(){
+  const file=fileInput.files[0]; if(!file) return alert('Upload Excel file');
+  const r=new FileReader();
+  r.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'binary'});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+    process(rows);
+  };
+  r.readAsBinaryString(file);
+}
 
-  for (let i = 1; i < rows.length; i++) {
-    const sex = (rows[i][sexIdx] || '').toString().toUpperCase();
-    const achievements = rows[i][subjIdx] || '';
+function process(rows){
+  const h=rows[0].map(x=>x.toString().toUpperCase());
+  const sIdx=h.findIndex(x=>x.includes('SUBJECT'));
+  const sexIdx=h.indexOf('SEX');
+  summaryData={}; genderData={};
 
-    achievements.toString().split(' ').forEach(item => {
-      const [sub, grade] = item.split('-');
-      if (!sub) return;
-      const g = grade || 'X';
-
-      if (!summaryData[sub]) {
-        summaryData[sub] = { TOTAL:0 };
-        GRADES.forEach(gr => summaryData[sub][gr] = 0);
-      }
-
+  for(let i=1;i<rows.length;i++){
+    const sex=(rows[i][sexIdx]||'').toUpperCase();
+    (rows[i][sIdx]||'').toString().split(' ').forEach(it=>{
+      const [sub,g0]=it.split('-'); if(!sub) return;
+      const g=g0||'X';
+      if(!summaryData[sub]){ summaryData[sub]={}; GRADES.forEach(x=>summaryData[sub][x]=0); }
       summaryData[sub][g]++;
-
-      if (!genderData[sub]) {
-        genderData[sub] = {};
-        GRADES.forEach(gr => genderData[sub][gr] = { M:0, F:0 });
-      }
-
-      if (genderData[sub][g] && genderData[sub][g][sex] !== undefined) {
-        genderData[sub][g][sex]++;
-      }
+      if(!genderData[sub]){ genderData[sub]={}; GRADES.forEach(x=>genderData[sub][x]={M:0,F:0}); }
+      if(genderData[sub][g][sex]!==undefined) genderData[sub][g][sex]++;
     });
   }
-
-  renderSummary();
-  renderGenderSummary();
+  render(); chart();
 }
 
-function renderSummary() {
-  const school = document.getElementById('school').value || 'SCHOOL NAME';
-  const year = document.getElementById('year').value || 'YEAR';
+function render(){
+  const subjects=Object.keys(summaryData).sort((a,b)=>a==='PROJECT'?1:b==='PROJECT'?-1:a.localeCompare(b));
+  let html=`<h2>${school.value}</h2><p><b>UNEB Subject Summary – ${year.value}</b></p>`;
+  html+='<table><tr><th>#</th><th>SUBJECT</th><th>LEARNERS</th>';
+  GRADES.forEach(g=>html+=`<th>${g}</th>`); html+='</tr>';
+  subjects.forEach((s,i)=>{
+    const t=GRADES.reduce((a,g)=>a+summaryData[s][g],0);
+    html+=`<tr><td>${i+1}</td><td>${s}</td><td>${t}</td>`;
+    GRADES.forEach(g=>html+=`<td>${summaryData[s][g]}</td>`);
+    html+='</tr>';
+  }); html+='</table>';
+  summary.innerHTML=html;
 
-  let html = `<h2>${school}</h2><p><strong>UNEB Subject Summary – ${year}</strong></p>`;
-  html += '<table><tr><th>S/NO</th><th>SUBJECT</th><th>LEARNERS SAT</th>';
-  GRADES.forEach(g => html += `<th>${g}</th><th>%${g}</th>`);
-  html += '</tr>';
-
-  let i = 1;
-  for (const sub in summaryData) {
-    const s = summaryData[sub];
-    const total = GRADES.reduce((t,g)=>t+s[g],0);
-    html += `<tr><td>${i++}</td><td>${sub}</td><td>${total}</td>`;
-    GRADES.forEach(g => html += `<td>${s[g]}</td><td>${total?((s[g]/total)*100).toFixed(1):0}</td>`);
-    html += '</tr>';
-  }
-
-  html += '</table>';
-  document.getElementById('summary').innerHTML = html;
+  let ghtml='<h3>Gender Summary</h3>';
+  subjects.forEach(s=>{
+    ghtml+=`<h4>${s}</h4><table><tr><th>Grade</th><th>Male</th><th>Female</th></tr>`;
+    GRADES.forEach(g=>ghtml+=`<tr><td>${g}</td><td>${genderData[s][g].M}</td><td>${genderData[s][g].F}</td></tr>`);
+    ghtml+='</table>';
+  }); genderSummary.innerHTML=ghtml;
 }
 
-function renderGenderSummary() {
-  let html = '<h3>Gender Performance Summary</h3>';
-  for (const sub in genderData) {
-    html += `<h4>${sub}</h4>`;
-    html += '<table><tr><th>GRADE</th><th>MALE</th><th>FEMALE</th></tr>';
-    GRADES.forEach(g => html += `<tr><td>${g}</td><td>${genderData[sub][g].M}</td><td>${genderData[sub][g].F}</td></tr>`);
-    html += '</table>';
+function chart(){
+  const sel=document.getElementById('subjectSelect');
+  if(!sel.options.length){
+    Object.keys(summaryData).forEach(s=>{
+      const o=document.createElement('option'); o.value=s; o.text=s; sel.add(o);
+    });
   }
-  document.getElementById('genderSummary').innerHTML = html;
+  const s=sel.value||sel.options[0]?.value; if(!s) return;
+  if(window._chart) window._chart.destroy();
+  window._chart=new Chart(document.getElementById('chart'),{
+    type:'bar',
+    data:{ labels:GRADES, datasets:[{label:s,data:GRADES.map(g=>summaryData[s][g])}] }
+  });
+}] }
+  });
+}
+
+function exportExcel(){
+  const wb=XLSX.utils.book_new();
+  const sdata=[[ 'SUBJECT','LEARNERS',...GRADES ]];
+  Object.keys(summaryData).forEach(s=>sdata.push([s,GRADES.reduce((a,g)=>a+summaryData[s][g],0),...GRADES.map(g=>summaryData[s][g])]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sdata),'Subject Summary');
+
+  const gdata=[[ 'SUBJECT','GRADE','MALE','FEMALE' ]];
+  Object.keys(genderData).forEach(s=>GRADES.forEach(g=>gdata.push([s,g,genderData[s][g].M,genderData[s][g].F])));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(gdata),'Gender Summary');
+
+  XLSX.writeFile(wb,'UNEB_Full_Summary.xlsx');
 }
 </script>
 
 </body>
 </html>
-
