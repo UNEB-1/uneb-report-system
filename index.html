@@ -11,7 +11,7 @@ body{font-family:Arial;background:#f4f6fb;margin:0}
 header{background:#1a4d8f;color:#fff;padding:15px;text-align:center}
 .container{padding:20px}
 table{width:100%;border-collapse:collapse;margin-top:20px;background:#fff}
-th,td{border:1px solid #ccc;padding:8px;text-align:center}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;font-size:14px}
 th{background:#e9eef3}
 button{background:#1a4d8f;color:#fff;padding:10px 16px;border:none;border-radius:5px;cursor:pointer;margin:5px}
 button:hover{background:#163f73}
@@ -69,9 +69,9 @@ function login(){
   }
 }
 
-/* ---------- DATA STORES ---------- */
-let subjectTotals = {};
-let genderTotals = {};
+/* ---------- STORES ---------- */
+let subjects = {};
+let gender = {};
 
 /* ---------- GENERATE REPORT ---------- */
 function generateReport(){
@@ -83,69 +83,84 @@ function generateReport(){
     const wb = XLSX.read(e.target.result,{type:"binary"});
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-    subjectTotals = {};
-    genderTotals = {};
+    subjects = {};
+    gender = {};
 
     rows.forEach(row=>{
       const sex = (row.SEX || "").toUpperCase();
-      const subjectsCell = row.SUBJECTS || "";
 
-      const items = subjectsCell.split(" ");
+      // 🔴 FIND SUBJECT COLUMN DYNAMICALLY
+      let subjectCell = "";
+      Object.keys(row).forEach(k=>{
+        if(String(row[k]).includes("-")) subjectCell = row[k];
+      });
+      if(!subjectCell) return;
 
-      items.forEach(it=>{
-        if(!it.includes("-")) return;
+      subjectCell.toString().split(" ").forEach(pair=>{
+        if(!pair.includes("-")) return;
 
-        let [sub, grade] = it.split("-");
+        let [sub, grade] = pair.split("-");
         sub = sub.trim().toUpperCase();
         grade = grade.trim().toUpperCase();
+        if(!["A","B","C","D","E","X"].includes(grade)) grade="X";
 
-        if(!["A","B","C","D","E","X"].includes(grade)) grade = "X";
-
-        if(!subjectTotals[sub]){
-          subjectTotals[sub] = {A:0,B:0,C:0,D:0,E:0,X:0};
+        if(!subjects[sub]){
+          subjects[sub] = {sat:0,A:0,B:0,C:0,D:0,E:0,X:0};
         }
-        subjectTotals[sub][grade]++;
 
-        if(!genderTotals[sub]){
-          genderTotals[sub] = {
+        subjects[sub].sat++;
+        subjects[sub][grade]++;
+
+        if(!gender[sub]){
+          gender[sub] = {
             MA:0,MB:0,MC:0,MD:0,ME:0,
             FA:0,FB:0,FC:0,FD:0,FE:0
           };
         }
 
-        if(sex==="M" && grade!=="X") genderTotals[sub]["M"+grade]++;
-        if(sex==="F" && grade!=="X") genderTotals[sub]["F"+grade]++;
+        if(sex==="M" && grade!=="X") gender[sub]["M"+grade]++;
+        if(sex==="F" && grade!=="X") gender[sub]["F"+grade]++;
       });
     });
 
     schoolHeader.innerText =
-      (schoolName.value || "SCHOOL") + " – UNEB REPORT " + (year.value || "");
+      (schoolName.value||"SCHOOL")+" – UNEB REPORT "+(year.value||"");
 
-    renderSubjectTable();
-    renderGenderTable();
+    renderSubject();
+    renderGender();
   };
-
   reader.readAsBinaryString(file);
 }
 
 /* ---------- SUBJECT TABLE ---------- */
-function renderSubjectTable(){
-  let html="<h2>Subject Summary</h2><table><tr><th>Subject</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>X</th></tr>";
+function renderSubject(){
+  let html=`<h2>Subject Summary</h2>
+  <table>
+  <tr>
+  <th>Subject</th><th>Sat</th>
+  <th>A</th><th>%A</th>
+  <th>B</th><th>%B</th>
+  <th>C</th><th>%C</th>
+  <th>D</th><th>%D</th>
+  <th>E</th><th>%E</th>
+  <th>X</th>
+  </tr>`;
 
-  Object.keys(subjectTotals).sort((a,b)=>{
+  Object.keys(subjects).sort((a,b)=>{
     if(a==="PROJECT") return 1;
     if(b==="PROJECT") return -1;
     return a.localeCompare(b);
-  }).forEach(sub=>{
-    const s = subjectTotals[sub];
+  }).forEach(s=>{
+    const x=subjects[s];
+    const pct=g=>((x[g]/x.sat)*100||0).toFixed(1);
     html+=`<tr>
-      <td>${sub}</td>
-      <td>${s.A}</td>
-      <td>${s.B}</td>
-      <td>${s.C}</td>
-      <td>${s.D}</td>
-      <td>${s.E}</td>
-      <td>${s.X}</td>
+      <td>${s}</td><td>${x.sat}</td>
+      <td>${x.A}</td><td>${pct("A")}</td>
+      <td>${x.B}</td><td>${pct("B")}</td>
+      <td>${x.C}</td><td>${pct("C")}</td>
+      <td>${x.D}</td><td>${pct("D")}</td>
+      <td>${x.E}</td><td>${pct("E")}</td>
+      <td>${x.X}</td>
     </tr>`;
   });
 
@@ -154,13 +169,19 @@ function renderSubjectTable(){
 }
 
 /* ---------- GENDER TABLE ---------- */
-function renderGenderTable(){
-  let html="<h2>Gender Summary</h2><table><tr><th>Subject</th><th>MA</th><th>MB</th><th>MC</th><th>MD</th><th>ME</th><th>FA</th><th>FB</th><th>FC</th><th>FD</th><th>FE</th></tr>";
+function renderGender(){
+  let html=`<h2>Gender Summary</h2>
+  <table>
+  <tr>
+  <th>Subject</th>
+  <th>MA</th><th>MB</th><th>MC</th><th>MD</th><th>ME</th>
+  <th>FA</th><th>FB</th><th>FC</th><th>FD</th><th>FE</th>
+  </tr>`;
 
-  Object.keys(genderTotals).forEach(sub=>{
-    const g = genderTotals[sub];
+  Object.keys(gender).forEach(s=>{
+    const g=gender[s];
     html+=`<tr>
-      <td>${sub}</td>
+      <td>${s}</td>
       <td>${g.MA}</td><td>${g.MB}</td><td>${g.MC}</td><td>${g.MD}</td><td>${g.ME}</td>
       <td>${g.FA}</td><td>${g.FB}</td><td>${g.FC}</td><td>${g.FD}</td><td>${g.FE}</td>
     </tr>`;
@@ -172,18 +193,16 @@ function renderGenderTable(){
 
 /* ---------- EXPORTS ---------- */
 function exportSubject(){
-  const data = Object.keys(subjectTotals).map(s=>({Subject:s,...subjectTotals[s]}));
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"Subject Summary");
+  const data=Object.keys(subjects).map(s=>({Subject:s,...subjects[s]}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),"Subject Summary");
   XLSX.writeFile(wb,"subject_summary.xlsx");
 }
 
 function exportGender(){
-  const data = Object.keys(genderTotals).map(s=>({Subject:s,...genderTotals[s]}));
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"Gender Summary");
+  const data=Object.keys(gender).map(s=>({Subject:s,...gender[s]}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),"Gender Summary");
   XLSX.writeFile(wb,"gender_summary.xlsx");
 }
 </script>
