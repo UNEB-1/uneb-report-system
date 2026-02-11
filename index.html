@@ -17,7 +17,7 @@ body{
 
 h1,h2,h3{
   text-align:center;
-  margin:5px 0;
+  margin:4px 0;
 }
 
 button{
@@ -38,17 +38,17 @@ table{
   width:100%;
   border-collapse:collapse;
   font-size:12px;
-  margin-top:10px;
+  margin-top:8px;
 }
 
 th{
   background:#1e3a8a;
   color:white;
-  padding:6px;
+  padding:5px;
 }
 
 td{
-  padding:5px;
+  padding:4px;
   text-align:center;
 }
 
@@ -63,7 +63,7 @@ tfoot td{
 
 .report-box{
   background:white;
-  padding:15px;
+  padding:12px;
   border-radius:8px;
   box-shadow:0 0 10px rgba(0,0,0,0.1);
 }
@@ -71,22 +71,69 @@ tfoot td{
 .summary-cards{
   display:flex;
   justify-content:space-around;
-  margin-top:15px;
+  margin-top:10px;
   font-weight:bold;
 }
 
 .card{
   background:#e0f2fe;
-  padding:10px;
+  padding:8px;
   border-radius:6px;
+}
+
+.signature{
+  margin-top:20px;
+  font-size:12px;
+}
+
+.signature-line{
+  margin-top:25px;
 }
 
 #app{ display:none; }
 
+/* ================= PRINT SETTINGS ================= */
+
+@page{
+  size: A4 landscape;
+  margin:10mm;
+}
+
 @media print{
-  body{ background:white; }
-  button,input{ display:none; }
-  .report-box{ box-shadow:none; }
+
+  body{
+    background:white;
+    margin:0;
+  }
+
+  button,input{
+    display:none;
+  }
+
+  .report-box{
+    box-shadow:none;
+    padding:5px;
+  }
+
+  table{
+    font-size:10px;
+  }
+
+  h1,h2,h3{
+    margin:2px 0;
+  }
+
+  .summary-cards{
+    margin-top:5px;
+  }
+
+  .signature{
+    margin-top:10px;
+  }
+
+  *{
+    page-break-inside:avoid !important;
+  }
 }
 
 </style>
@@ -122,6 +169,18 @@ tfoot td{
 <div id="subjectSummary"></div>
 <div id="genderSummary"></div>
 <div id="analytics"></div>
+
+<div class="signature">
+  <div class="signature-line">
+    Signature: ..............................................................
+  </div>
+  <br>
+  <strong>MAWERERE FRANCIS</strong><br>
+  In charge Students Data<br>
+  Contact: 0788222315<br>
+  Email: mawererefrancis@gmail.com
+</div>
+
 </div>
 
 </div>
@@ -206,7 +265,7 @@ function generateReport(){
 }
 
 
-// SUBJECT TABLE
+/* SUBJECT TABLE */
 function renderSubject(){
 
  let totals={A:0,B:0,C:0,D:0,E:0};
@@ -253,7 +312,7 @@ function renderSubject(){
   </tr>`;
  });
 
- // PROJECT ROW
+ /* PROJECT ROW */
  let projectTotals={PA:0,PB:0,PC:0,PD:0,PE:0,PX:0};
  Object.values(subjects).forEach(x=>{
    projectTotals.PA+=x.PA;
@@ -275,7 +334,7 @@ function renderSubject(){
  <td>${projectTotals.PX}</td>
  </tr>`;
 
- // TOTAL ROW
+ /* TOTAL ROW */
  h+=`<tfoot>
  <tr>
  <td></td>
@@ -293,7 +352,7 @@ function renderSubject(){
 }
 
 
-// GENDER TABLE
+/* GENDER TABLE */
 function renderGender(){
 
  let totals={MA:0,MB:0,MC:0,MD:0,ME:0,FA:0,FB:0,FC:0,FD:0,FE:0};
@@ -331,7 +390,7 @@ function renderGender(){
 }
 
 
-// ANALYTICS
+/* ANALYTICS */
 function renderAnalytics(){
 
  let totalA=0,totalSat=0;
@@ -356,10 +415,10 @@ function renderAnalytics(){
 }
 
 
-// PRINT
+/* PRINT */
 function printReport(){ window.print(); }
 
-// PDF
+/* PDF */
 function downloadPDF(){
  html2pdf().set({
    margin:5,
@@ -369,7 +428,7 @@ function downloadPDF(){
  }).from(document.getElementById("reportArea")).save();
 }
 
-// EXCEL
+/* EXCEL */
 function exportExcel(){
  let data=[["Subject","Sat","A","B","C","D","E","X"]];
  Object.keys(subjects).forEach(s=>{
