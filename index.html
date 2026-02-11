@@ -2,22 +2,106 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>UNEB Report System</title>
+<title>UNEB Professional Report System</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <style>
-body{font-family:Arial;margin:20px}
-table{border-collapse:collapse;width:100%;margin-top:15px}
-th,td{border:1px solid #000;padding:6px;text-align:center;font-size:13px}
-th{background:#eee}
-input,button{padding:6px;margin:5px 5px 5px 0}
-#app{display:none}
-#loginBox{max-width:300px;margin:auto;padding:20px;border:1px solid #ccc}
-@media print{
- button,input{display:none}
+
+body{
+  font-family: "Segoe UI", Arial, sans-serif;
+  margin:20px;
+  background:#f4f6f9;
+  color:#222;
 }
+
+h1,h2,h3{
+  margin:5px 0;
+  text-align:center;
+}
+
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:4px;
+  background:#1e3a8a;
+  color:white;
+  cursor:pointer;
+  font-weight:600;
+}
+
+button:hover{
+  background:#162d6b;
+}
+
+input{
+  padding:6px;
+  margin:5px 5px 5px 0;
+}
+
+table{
+  border-collapse:collapse;
+  width:100%;
+  margin-top:10px;
+  font-size:12px;
+}
+
+th{
+  background:#1e3a8a;
+  color:white;
+  padding:6px;
+}
+
+td{
+  padding:5px;
+  text-align:center;
+}
+
+th,td{
+  border:1px solid #ccc;
+}
+
+tr:nth-child(even){
+  background:#f2f4f8;
+}
+
+tfoot td{
+  font-weight:bold;
+  background:#e2e8f0;
+}
+
+#app{display:none}
+
+#loginBox{
+  max-width:300px;
+  margin:auto;
+  padding:20px;
+  background:white;
+  border-radius:8px;
+  box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+.report-container{
+  background:white;
+  padding:15px;
+  border-radius:8px;
+  box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+@media print{
+  body{
+    background:white;
+  }
+  button,input{
+    display:none;
+  }
+  .report-container{
+    box-shadow:none;
+    padding:0;
+  }
+}
+
 </style>
 </head>
 
@@ -40,12 +124,15 @@ input,button{padding:6px;margin:5px 5px 5px 0}
 <input type="file" id="file" accept=".xlsx,.xls">
 <button onclick="generateReport()">Generate Report</button>
 
-<br>
+<br><br>
+
 <button onclick="printReport()">Print</button>
 <button onclick="downloadPDF()">Export PDF</button>
 <button onclick="exportExcel()">Export Excel</button>
 
-<div id="reportArea">
+<br><br>
+
+<div id="reportArea" class="report-container">
   <div id="subjectSummary"></div>
   <div id="genderSummary"></div>
 </div>
@@ -134,13 +221,20 @@ function generateReport(){
 
   renderSubject();
   renderGender();
-
  };
 
  reader.readAsArrayBuffer(file);
 }
 
+
+// -------- SUBJECT TABLE WITH TOTALS --------
+
 function renderSubject(){
+
+ let totals = {
+   sat:0,A:0,B:0,C:0,D:0,E:0,X:0,
+   PA:0,PB:0,PC:0,PD:0,PE:0,PX:0
+ };
 
  let h = `<h2>Subject Summary</h2>
  <table>
@@ -152,11 +246,16 @@ function renderSubject(){
  <th>D</th><th>%D</th>
  <th>E</th><th>%E</th>
  <th>X</th>
- <th>PA</th><th>PB</th><th>PC</th><th>PD</th><th>PE</th><th>PX</th>
+ <th>PA</th><th>PB</th><th>PC</th>
+ <th>PD</th><th>PE</th><th>PX</th>
  </tr>`;
 
  Object.keys(subjects).sort().forEach(s=>{
+
   let x = subjects[s];
+
+  Object.keys(totals).forEach(k=> totals[k]+=x[k]);
+
   let p = g => x.sat ? ((x[g]/x.sat)*100).toFixed(1) : "0.0";
 
   h += `<tr>
@@ -177,11 +276,37 @@ function renderSubject(){
   </tr>`;
  });
 
- h += "</table>";
+ h += `<tfoot>
+ <tr>
+ <td>TOTAL</td>
+ <td>${totals.sat}</td>
+ <td>${totals.A}</td><td></td>
+ <td>${totals.B}</td><td></td>
+ <td>${totals.C}</td><td></td>
+ <td>${totals.D}</td><td></td>
+ <td>${totals.E}</td><td></td>
+ <td>${totals.X}</td>
+ <td>${totals.PA}</td>
+ <td>${totals.PB}</td>
+ <td>${totals.PC}</td>
+ <td>${totals.PD}</td>
+ <td>${totals.PE}</td>
+ <td>${totals.PX}</td>
+ </tr>
+ </tfoot></table>`;
+
  subjectSummary.innerHTML = h;
 }
 
+
+// -------- GENDER TABLE WITH TOTALS --------
+
 function renderGender(){
+
+ let totals = {
+  MA:0,MB:0,MC:0,MD:0,ME:0,
+  FA:0,FB:0,FC:0,FD:0,FE:0
+ };
 
  let h = `<h2>Gender Summary</h2>
  <table>
@@ -192,47 +317,58 @@ function renderGender(){
  </tr>`;
 
  Object.keys(gender).sort().forEach(s=>{
+
   let g = gender[s];
+  Object.keys(totals).forEach(k=> totals[k]+=g[k]);
 
   h += `<tr>
    <td>${s}</td>
-   <td>${g.MA}</td><td>${g.MB}</td><td>${g.MC}</td><td>${g.MD}</td><td>${g.ME}</td>
-   <td>${g.FA}</td><td>${g.FB}</td><td>${g.FC}</td><td>${g.FD}</td><td>${g.FE}</td>
+   <td>${g.MA}</td><td>${g.MB}</td><td>${g.MC}</td>
+   <td>${g.MD}</td><td>${g.ME}</td>
+   <td>${g.FA}</td><td>${g.FB}</td><td>${g.FC}</td>
+   <td>${g.FD}</td><td>${g.FE}</td>
   </tr>`;
  });
 
- h += "</table>";
+ h += `<tfoot>
+ <tr>
+ <td>TOTAL</td>
+ <td>${totals.MA}</td><td>${totals.MB}</td>
+ <td>${totals.MC}</td><td>${totals.MD}</td>
+ <td>${totals.ME}</td>
+ <td>${totals.FA}</td><td>${totals.FB}</td>
+ <td>${totals.FC}</td><td>${totals.FD}</td>
+ <td>${totals.FE}</td>
+ </tr>
+ </tfoot></table>`;
+
  genderSummary.innerHTML = h;
 }
 
 
-// ---------- PRINT ----------
+// PRINT
 function printReport(){
  window.print();
 }
 
-
-// ---------- PDF ----------
+// PDF
 function downloadPDF(){
  const element = document.getElementById("reportArea");
- html2pdf().from(element).save("UNEB_Report.pdf");
+ html2pdf().set({
+   margin:5,
+   filename:'UNEB_Report.pdf',
+   html2canvas:{scale:2},
+   jsPDF:{orientation:'landscape'}
+ }).from(element).save();
 }
 
-
-// ---------- EXCEL EXPORT ----------
+// EXCEL
 function exportExcel(){
-
  let data = [["Subject","Sat","A","B","C","D","E","X","PA","PB","PC","PD","PE","PX"]];
-
  Object.keys(subjects).forEach(s=>{
    let x = subjects[s];
-   data.push([
-     s,x.sat,
-     x.A,x.B,x.C,x.D,x.E,x.X,
-     x.PA,x.PB,x.PC,x.PD,x.PE,x.PX
-   ]);
+   data.push([s,x.sat,x.A,x.B,x.C,x.D,x.E,x.X,x.PA,x.PB,x.PC,x.PD,x.PE,x.PX]);
  });
-
  const ws = XLSX.utils.aoa_to_sheet(data);
  const wb = XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb, ws, "Subject Summary");
