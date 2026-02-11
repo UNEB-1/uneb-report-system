@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>UNEB Professional Report System</title>
+<title>UNEB Analytics System</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -10,41 +10,35 @@
 <style>
 
 body{
-  font-family: "Segoe UI", Arial, sans-serif;
+  font-family:"Segoe UI",Arial,sans-serif;
   margin:20px;
   background:#f4f6f9;
-  color:#222;
 }
 
 h1,h2,h3{
-  margin:5px 0;
   text-align:center;
+  margin:5px 0;
 }
 
 button{
-  padding:8px 12px;
+  padding:8px 14px;
   border:none;
-  border-radius:4px;
+  border-radius:5px;
   background:#1e3a8a;
   color:white;
-  cursor:pointer;
   font-weight:600;
+  cursor:pointer;
 }
 
-button:hover{
-  background:#162d6b;
-}
+button:hover{ background:#162d6b; }
 
-input{
-  padding:6px;
-  margin:5px 5px 5px 0;
-}
+input{ padding:6px; margin:5px; }
 
 table{
-  border-collapse:collapse;
   width:100%;
-  margin-top:10px;
+  border-collapse:collapse;
   font-size:12px;
+  margin-top:10px;
 }
 
 th{
@@ -58,59 +52,51 @@ td{
   text-align:center;
 }
 
-th,td{
-  border:1px solid #ccc;
-}
+th,td{ border:1px solid #ccc; }
 
-tr:nth-child(even){
-  background:#f2f4f8;
-}
+tr:nth-child(even){ background:#f2f4f8; }
 
 tfoot td{
   font-weight:bold;
   background:#e2e8f0;
 }
 
-#app{display:none}
-
-#loginBox{
-  max-width:300px;
-  margin:auto;
-  padding:20px;
-  background:white;
-  border-radius:8px;
-  box-shadow:0 0 10px rgba(0,0,0,0.1);
-}
-
-.report-container{
+.report-box{
   background:white;
   padding:15px;
   border-radius:8px;
   box-shadow:0 0 10px rgba(0,0,0,0.1);
 }
 
+.summary-cards{
+  display:flex;
+  justify-content:space-around;
+  margin-top:15px;
+  font-weight:bold;
+}
+
+.card{
+  background:#e0f2fe;
+  padding:10px;
+  border-radius:6px;
+}
+
+#app{ display:none; }
+
 @media print{
-  body{
-    background:white;
-  }
-  button,input{
-    display:none;
-  }
-  .report-container{
-    box-shadow:none;
-    padding:0;
-  }
+  body{ background:white; }
+  button,input{ display:none; }
+  .report-box{ box-shadow:none; }
 }
 
 </style>
 </head>
-
 <body>
 
 <div id="loginBox">
 <h2>Login</h2>
-<input type="text" id="username" placeholder="Username"><br>
-<input type="password" id="password" placeholder="Password"><br>
+<input id="username" placeholder="Username"><br>
+<input id="password" type="password" placeholder="Password"><br>
 <button onclick="login()">Login</button>
 <p id="loginError" style="color:red;"></p>
 </div>
@@ -119,8 +105,8 @@ tfoot td{
 
 <h1 id="schoolHeader"></h1>
 
-<input type="text" id="schoolName" placeholder="School Name">
-<input type="text" id="year" placeholder="Year">
+<input id="schoolName" placeholder="School Name">
+<input id="year" placeholder="Year">
 <input type="file" id="file" accept=".xlsx,.xls">
 <button onclick="generateReport()">Generate Report</button>
 
@@ -132,9 +118,10 @@ tfoot td{
 
 <br><br>
 
-<div id="reportArea" class="report-container">
-  <div id="subjectSummary"></div>
-  <div id="genderSummary"></div>
+<div id="reportArea" class="report-box">
+<div id="subjectSummary"></div>
+<div id="genderSummary"></div>
+<div id="analytics"></div>
 </div>
 
 </div>
@@ -177,23 +164,18 @@ function generateReport(){
    if(!achievements) return;
 
    const valid = ["A","B","C","D","E","X"];
-   const pg = valid.includes(project) ? project : "X";
+   const pg = valid.includes(project)?project:"X";
 
    achievements.split(" ").forEach(item=>{
 
      if(!item.includes("-")) return;
 
-     const [subjectRaw, gradeRaw] = item.split("-");
+     const [subjectRaw,gradeRaw] = item.split("-");
      const subject = subjectRaw.toUpperCase().trim();
-     const grade = gradeRaw.toUpperCase().trim();
-     const g = valid.includes(grade) ? grade : "X";
+     const g = valid.includes(gradeRaw)?gradeRaw:"X";
 
      if(!subjects[subject]){
-       subjects[subject] = {
-        sat:0,
-        A:0,B:0,C:0,D:0,E:0,X:0,
-        PA:0,PB:0,PC:0,PD:0,PE:0,PX:0
-       };
+       subjects[subject]={sat:0,A:0,B:0,C:0,D:0,E:0,X:0,PA:0,PB:0,PC:0,PD:0,PE:0,PX:0};
      }
 
      subjects[subject].sat++;
@@ -201,10 +183,7 @@ function generateReport(){
      subjects[subject]["P"+pg]++;
 
      if(!gender[subject]){
-       gender[subject] = {
-        MA:0,MB:0,MC:0,MD:0,ME:0,
-        FA:0,FB:0,FC:0,FD:0,FE:0
-       };
+       gender[subject]={MA:0,MB:0,MC:0,MD:0,ME:0,FA:0,FB:0,FC:0,FD:0,FE:0};
      }
 
      if(sex==="M" && g!=="X") gender[subject]["M"+g]++;
@@ -214,31 +193,28 @@ function generateReport(){
 
   });
 
-  schoolHeader.innerHTML = `
-  <h2>${schoolName.value || "SCHOOL NAME"}</h2>
-  <h3>UNEB REPORT ${year.value || ""}</h3>
-  `;
+  schoolHeader.innerHTML =
+  `<h2>${schoolName.value||"SCHOOL NAME"}</h2>
+   <h3>UNEB REPORT ${year.value||""}</h3>`;
 
   renderSubject();
   renderGender();
+  renderAnalytics();
  };
 
  reader.readAsArrayBuffer(file);
 }
 
 
-// -------- SUBJECT TABLE WITH TOTALS --------
-
+// SUBJECT TABLE
 function renderSubject(){
 
- let totals = {
-   sat:0,A:0,B:0,C:0,D:0,E:0,X:0,
-   PA:0,PB:0,PC:0,PD:0,PE:0,PX:0
- };
+ let totals={A:0,B:0,C:0,D:0,E:0};
 
- let h = `<h2>Subject Summary</h2>
+ let h=`<h2>Subject Summary</h2>
  <table>
  <tr>
+ <th>Rank</th>
  <th>Subject</th><th>Sat</th>
  <th>A</th><th>%A</th>
  <th>B</th><th>%B</th>
@@ -246,69 +222,83 @@ function renderSubject(){
  <th>D</th><th>%D</th>
  <th>E</th><th>%E</th>
  <th>X</th>
- <th>PA</th><th>PB</th><th>PC</th>
- <th>PD</th><th>PE</th><th>PX</th>
  </tr>`;
 
- Object.keys(subjects).sort().forEach(s=>{
+ let sorted=Object.keys(subjects).sort((a,b)=>{
+   return (subjects[b].A/subjects[b].sat)-(subjects[a].A/subjects[a].sat);
+ });
 
-  let x = subjects[s];
+ sorted.forEach((s,i)=>{
 
-  Object.keys(totals).forEach(k=> totals[k]+=x[k]);
+  let x=subjects[s];
 
-  let p = g => x.sat ? ((x[g]/x.sat)*100).toFixed(1) : "0.0";
+  totals.A+=x.A;
+  totals.B+=x.B;
+  totals.C+=x.C;
+  totals.D+=x.D;
+  totals.E+=x.E;
 
-  h += `<tr>
-   <td>${s}</td>
-   <td>${x.sat}</td>
-   <td>${x.A}</td><td>${p("A")}</td>
-   <td>${x.B}</td><td>${p("B")}</td>
-   <td>${x.C}</td><td>${p("C")}</td>
-   <td>${x.D}</td><td>${p("D")}</td>
-   <td>${x.E}</td><td>${p("E")}</td>
-   <td>${x.X}</td>
-   <td>${x.PA}</td>
-   <td>${x.PB}</td>
-   <td>${x.PC}</td>
-   <td>${x.PD}</td>
-   <td>${x.PE}</td>
-   <td>${x.PX}</td>
+  let p=g=>x.sat?((x[g]/x.sat)*100).toFixed(1):"0.0";
+
+  h+=`<tr>
+  <td>${i+1}</td>
+  <td>${s}</td>
+  <td>${x.sat}</td>
+  <td>${x.A}</td><td>${p("A")}</td>
+  <td>${x.B}</td><td>${p("B")}</td>
+  <td>${x.C}</td><td>${p("C")}</td>
+  <td>${x.D}</td><td>${p("D")}</td>
+  <td>${x.E}</td><td>${p("E")}</td>
+  <td>${x.X}</td>
   </tr>`;
  });
 
- h += `<tfoot>
+ // PROJECT ROW
+ let projectTotals={PA:0,PB:0,PC:0,PD:0,PE:0,PX:0};
+ Object.values(subjects).forEach(x=>{
+   projectTotals.PA+=x.PA;
+   projectTotals.PB+=x.PB;
+   projectTotals.PC+=x.PC;
+   projectTotals.PD+=x.PD;
+   projectTotals.PE+=x.PE;
+   projectTotals.PX+=x.PX;
+ });
+
+ h+=`<tr style="background:#e0f2fe;font-weight:bold">
+ <td></td>
+ <td>PROJECT WORK</td><td></td>
+ <td>${projectTotals.PA}</td><td></td>
+ <td>${projectTotals.PB}</td><td></td>
+ <td>${projectTotals.PC}</td><td></td>
+ <td>${projectTotals.PD}</td><td></td>
+ <td>${projectTotals.PE}</td><td></td>
+ <td>${projectTotals.PX}</td>
+ </tr>`;
+
+ // TOTAL ROW
+ h+=`<tfoot>
  <tr>
- <td>TOTAL</td>
- <td>${totals.sat}</td>
+ <td></td>
+ <td>TOTAL (A–E)</td><td></td>
  <td>${totals.A}</td><td></td>
  <td>${totals.B}</td><td></td>
  <td>${totals.C}</td><td></td>
  <td>${totals.D}</td><td></td>
  <td>${totals.E}</td><td></td>
- <td>${totals.X}</td>
- <td>${totals.PA}</td>
- <td>${totals.PB}</td>
- <td>${totals.PC}</td>
- <td>${totals.PD}</td>
- <td>${totals.PE}</td>
- <td>${totals.PX}</td>
+ <td></td>
  </tr>
  </tfoot></table>`;
 
- subjectSummary.innerHTML = h;
+ subjectSummary.innerHTML=h;
 }
 
 
-// -------- GENDER TABLE WITH TOTALS --------
-
+// GENDER TABLE
 function renderGender(){
 
- let totals = {
-  MA:0,MB:0,MC:0,MD:0,ME:0,
-  FA:0,FB:0,FC:0,FD:0,FE:0
- };
+ let totals={MA:0,MB:0,MC:0,MD:0,ME:0,FA:0,FB:0,FC:0,FD:0,FE:0};
 
- let h = `<h2>Gender Summary</h2>
+ let h=`<h2>Gender Summary</h2>
  <table>
  <tr>
  <th>Subject</th>
@@ -317,61 +307,78 @@ function renderGender(){
  </tr>`;
 
  Object.keys(gender).sort().forEach(s=>{
+  let g=gender[s];
+  Object.keys(totals).forEach(k=>totals[k]+=g[k]);
 
-  let g = gender[s];
-  Object.keys(totals).forEach(k=> totals[k]+=g[k]);
-
-  h += `<tr>
-   <td>${s}</td>
-   <td>${g.MA}</td><td>${g.MB}</td><td>${g.MC}</td>
-   <td>${g.MD}</td><td>${g.ME}</td>
-   <td>${g.FA}</td><td>${g.FB}</td><td>${g.FC}</td>
-   <td>${g.FD}</td><td>${g.FE}</td>
+  h+=`<tr>
+  <td>${s}</td>
+  <td>${g.MA}</td><td>${g.MB}</td><td>${g.MC}</td><td>${g.MD}</td><td>${g.ME}</td>
+  <td>${g.FA}</td><td>${g.FB}</td><td>${g.FC}</td><td>${g.FD}</td><td>${g.FE}</td>
   </tr>`;
  });
 
- h += `<tfoot>
+ h+=`<tfoot>
  <tr>
  <td>TOTAL</td>
- <td>${totals.MA}</td><td>${totals.MB}</td>
- <td>${totals.MC}</td><td>${totals.MD}</td>
- <td>${totals.ME}</td>
- <td>${totals.FA}</td><td>${totals.FB}</td>
- <td>${totals.FC}</td><td>${totals.FD}</td>
- <td>${totals.FE}</td>
+ <td>${totals.MA}</td><td>${totals.MB}</td><td>${totals.MC}</td>
+ <td>${totals.MD}</td><td>${totals.ME}</td>
+ <td>${totals.FA}</td><td>${totals.FB}</td><td>${totals.FC}</td>
+ <td>${totals.FD}</td><td>${totals.FE}</td>
  </tr>
  </tfoot></table>`;
 
- genderSummary.innerHTML = h;
+ genderSummary.innerHTML=h;
+}
+
+
+// ANALYTICS
+function renderAnalytics(){
+
+ let totalA=0,totalSat=0;
+
+ Object.values(subjects).forEach(x=>{
+   totalA+=x.A;
+   totalSat+=x.sat;
+ });
+
+ let mean=(totalA/totalSat*100)||0;
+
+ let comment="";
+ if(mean>=40) comment="Excellent Performance";
+ else if(mean>=25) comment="Good Performance";
+ else comment="Needs Improvement";
+
+ analytics.innerHTML=`
+ <div class="summary-cards">
+   <div class="card">School %A: ${mean.toFixed(1)}%</div>
+   <div class="card">${comment}</div>
+ </div>`;
 }
 
 
 // PRINT
-function printReport(){
- window.print();
-}
+function printReport(){ window.print(); }
 
 // PDF
 function downloadPDF(){
- const element = document.getElementById("reportArea");
  html2pdf().set({
    margin:5,
-   filename:'UNEB_Report.pdf',
+   filename:"UNEB_Report.pdf",
    html2canvas:{scale:2},
-   jsPDF:{orientation:'landscape'}
- }).from(element).save();
+   jsPDF:{orientation:"landscape"}
+ }).from(document.getElementById("reportArea")).save();
 }
 
 // EXCEL
 function exportExcel(){
- let data = [["Subject","Sat","A","B","C","D","E","X","PA","PB","PC","PD","PE","PX"]];
+ let data=[["Subject","Sat","A","B","C","D","E","X"]];
  Object.keys(subjects).forEach(s=>{
-   let x = subjects[s];
-   data.push([s,x.sat,x.A,x.B,x.C,x.D,x.E,x.X,x.PA,x.PB,x.PC,x.PD,x.PE,x.PX]);
+  let x=subjects[s];
+  data.push([s,x.sat,x.A,x.B,x.C,x.D,x.E,x.X]);
  });
- const ws = XLSX.utils.aoa_to_sheet(data);
- const wb = XLSX.utils.book_new();
- XLSX.utils.book_append_sheet(wb, ws, "Subject Summary");
+ const ws=XLSX.utils.aoa_to_sheet(data);
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,"Summary");
  XLSX.writeFile(wb,"UNEB_Report.xlsx");
 }
 
