@@ -3,22 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <title>UNEB Report System</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <style>
 body{font-family:Arial;margin:20px}
 table{border-collapse:collapse;width:100%;margin-top:15px}
 th,td{border:1px solid #000;padding:6px;text-align:center;font-size:13px}
 th{background:#eee}
-input,button{padding:6px;margin:5px 0}
+input,button{padding:6px;margin:5px 5px 5px 0}
 #app{display:none}
 #loginBox{max-width:300px;margin:auto;padding:20px;border:1px solid #ccc}
+@media print{
+ button,input{display:none}
+}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div id="loginBox">
 <h2>Login</h2>
 <input type="text" id="username" placeholder="Username"><br>
@@ -27,7 +31,6 @@ input,button{padding:6px;margin:5px 0}
 <p id="loginError" style="color:red;"></p>
 </div>
 
-<!-- MAIN APP -->
 <div id="app">
 
 <h1 id="schoolHeader"></h1>
@@ -37,8 +40,15 @@ input,button{padding:6px;margin:5px 0}
 <input type="file" id="file" accept=".xlsx,.xls">
 <button onclick="generateReport()">Generate Report</button>
 
-<div id="subjectSummary"></div>
-<div id="genderSummary"></div>
+<br>
+<button onclick="printReport()">Print</button>
+<button onclick="downloadPDF()">Export PDF</button>
+<button onclick="exportExcel()">Export Excel</button>
+
+<div id="reportArea">
+  <div id="subjectSummary"></div>
+  <div id="genderSummary"></div>
+</div>
 
 </div>
 
@@ -82,10 +92,7 @@ function generateReport(){
    const valid = ["A","B","C","D","E","X"];
    const pg = valid.includes(project) ? project : "X";
 
-   // Split subjects like: ENG-B CRE-C HIS-C
-   const parts = achievements.split(" ");
-
-   parts.forEach(item=>{
+   achievements.split(" ").forEach(item=>{
 
      if(!item.includes("-")) return;
 
@@ -133,9 +140,6 @@ function generateReport(){
  reader.readAsArrayBuffer(file);
 }
 
-
-// ---------- SUBJECT TABLE ----------
-
 function renderSubject(){
 
  let h = `<h2>Subject Summary</h2>
@@ -151,10 +155,7 @@ function renderSubject(){
  <th>PA</th><th>PB</th><th>PC</th><th>PD</th><th>PE</th><th>PX</th>
  </tr>`;
 
- Object.keys(subjects)
- .sort((a,b)=>a.localeCompare(b))
- .forEach(s=>{
-
+ Object.keys(subjects).sort().forEach(s=>{
   let x = subjects[s];
   let p = g => x.sat ? ((x[g]/x.sat)*100).toFixed(1) : "0.0";
 
@@ -180,9 +181,6 @@ function renderSubject(){
  subjectSummary.innerHTML = h;
 }
 
-
-// ---------- GENDER TABLE ----------
-
 function renderGender(){
 
  let h = `<h2>Gender Summary</h2>
@@ -193,10 +191,7 @@ function renderGender(){
  <th>FA</th><th>FB</th><th>FC</th><th>FD</th><th>FE</th>
  </tr>`;
 
- Object.keys(gender)
- .sort((a,b)=>a.localeCompare(b))
- .forEach(s=>{
-
+ Object.keys(gender).sort().forEach(s=>{
   let g = gender[s];
 
   h += `<tr>
@@ -208,6 +203,40 @@ function renderGender(){
 
  h += "</table>";
  genderSummary.innerHTML = h;
+}
+
+
+// ---------- PRINT ----------
+function printReport(){
+ window.print();
+}
+
+
+// ---------- PDF ----------
+function downloadPDF(){
+ const element = document.getElementById("reportArea");
+ html2pdf().from(element).save("UNEB_Report.pdf");
+}
+
+
+// ---------- EXCEL EXPORT ----------
+function exportExcel(){
+
+ let data = [["Subject","Sat","A","B","C","D","E","X","PA","PB","PC","PD","PE","PX"]];
+
+ Object.keys(subjects).forEach(s=>{
+   let x = subjects[s];
+   data.push([
+     s,x.sat,
+     x.A,x.B,x.C,x.D,x.E,x.X,
+     x.PA,x.PB,x.PC,x.PD,x.PE,x.PX
+   ]);
+ });
+
+ const ws = XLSX.utils.aoa_to_sheet(data);
+ const wb = XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb, ws, "Subject Summary");
+ XLSX.writeFile(wb,"UNEB_Report.xlsx");
 }
 
 </script>
